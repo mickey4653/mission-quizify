@@ -6,6 +6,7 @@ from langchain_community.document_loaders import PyPDFLoader
 import os
 import tempfile
 import uuid
+from PyPDF2 import PdfReader
 
 class DocumentProcessor:
     """
@@ -47,6 +48,10 @@ class DocumentProcessor:
             # Allow only type `pdf`
             # Allow multiple PDFs for ingestion
             #####################################
+
+            label ='Upload PDF Files',
+            accept_multiple_files=True,
+            type=['pdf']
         )
         
         if uploaded_files is not None:
@@ -66,10 +71,29 @@ class DocumentProcessor:
                 # Use PyPDFLoader here to load the PDF and extract pages.
                 # https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf#using-pypdf
                 # You will need to figure out how to use PyPDFLoader to process the temporary file.
+
+                with open(temp_file_path, 'rb') as pdf_file:
+                    #Creating a PdfFileReader Object
+                    pdf_reader = PdfReader(pdf_file)
+
+                    #Getting the number of pages in the pdf
+                    num_pages = len(pdf_reader.pages)  #pdf_reader.pages
+
+                    #Extracting text from each page
+                    for page_number in range(num_pages):
+                        #Getting a specific page
+                        page = pdf_reader.pages[page_number]
+
+                        #Extracting text from the page
+                        page_text = page.extract_text()
+
+                        #Adding the extracted text to the 'pages' list
+
                 
                 # Step 3: Then, Add the extracted pages to the 'pages' list.
                 #####################################
-                
+                        self.pages.append(page_text)
+
                 # Clean up by deleting the temporary file.
                 os.unlink(temp_file_path)
             
