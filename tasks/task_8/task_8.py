@@ -78,15 +78,27 @@ class QuizGenerator:
 
         :return: A JSON object representing the generated quiz question.
         """
-        if not self.llm:
-            self.init_llm()
         if not self.vectorstore:
             raise ValueError("Vectorstore not provided.")
+        
+        if not self.llm:
+            try:
+                self.init_llm()
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize LLM: {e}")
+                
+        
+        
+        # Retrieve the vectorstore from the ChromaCollectionCreator
+        vectorstore = self.vectorstore.db
+
+        if not vectorstore:
+            raise ValueError("Vectorstore is not initialized.")
         
         from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 
         # Enable a Retriever
-        retriever = self.vectorstore.as_retriever()
+        retriever = vectorstore.as_retriever()
         
         # Use the system template to create a PromptTemplate
         prompt = PromptTemplate.from_template(self.system_template)
@@ -124,26 +136,34 @@ class QuizGenerator:
         self.question_bank = [] # Reset the question bank
 
         for _ in range(self.num_questions):
-            ##### YOUR CODE HERE #####
-            question_str = # Use class method to generate question
-            
-            ##### YOUR CODE HERE #####
-            try:
-                # Convert the JSON String to a dictionary
-            except json.JSONDecodeError:
-                print("Failed to decode question JSON.")
-                continue  # Skip this iteration if JSON decoding fails
-            ##### YOUR CODE HERE #####
+            retry_limit = 3
+            retry_count = 0
+            while retry_count < retry_limit:
+                ##### YOUR CODE HERE #####
+                question_str = self.generate_question_with_vectorstore() # Use class method to generate question
+                ##### YOUR CODE HERE #####
+        
+                try:
+                    # Convert the JSON String to a dictionary
+                    question_dict = json.loads(question_str)
+                except json.JSONDecodeError:
+                    print("Failed to decode question JSON.")
+                    continue  # Skip this iteration if JSON decoding fails
+                    ##### YOUR CODE HERE #####
 
+                    ##### YOUR CODE HERE #####
+                # Validate the question using the validate_question method
+                if self.validate_question(question_dict):
+                    print("Successfully generated unique question")
+                    # Add the valid and unique question to the bank
+                    self.question_bank.append(question_dict)
+                    break
+                else:
+                    retry_count += 1  # Increment the retry count
+                    if retry_count == retry_limit:
+                        print("Retry limit reached. Skipping this question.")
+                    # print("Duplicate or invalid question detected.")
             ##### YOUR CODE HERE #####
-            # Validate the question using the validate_question method
-            if self.validate_question(question):
-                print("Successfully generated unique question")
-                # Add the valid and unique question to the bank
-            else:
-                print("Duplicate or invalid question detected.")
-            ##### YOUR CODE HERE #####
-
         return self.question_bank
 
     def validate_question(self, question: dict) -> bool:
@@ -168,9 +188,16 @@ class QuizGenerator:
         """
         ##### YOUR CODE HERE #####
         # Consider missing 'question' key as invalid in the dict object
+        if "question" not in question:
+            return False # Consider missing 'question' key as invalid in the dict object
+        question_text = question["question"]
         # Check if a question with the same text already exists in the self.question_bank
+        for q in self.question_bank:
+            if q["question"] == question_text:
+                return False
+        return True #is_unique
         ##### YOUR CODE HERE #####
-        return is_unique
+        
 
 
 # Test Generating the Quiz
@@ -178,7 +205,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR-PROJECT-ID-HERE",
+        "project": "gemini-quizify-416617",
         "location": "us-central1"
     }
     
@@ -214,7 +241,7 @@ if __name__ == "__main__":
                 question = question_bank[0]
 
     if question_bank:
-        screen.empty()
+        # screen.empty()
         with st.container():
             st.header("Generated Quiz Question: ")
             for question in question_bank:
