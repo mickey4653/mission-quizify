@@ -238,7 +238,8 @@ if __name__ == "__main__":
                 # Test the Quiz Generator
                 generator = QuizGenerator(topic_input, questions, chroma_creator)
                 question_bank = generator.generate_quiz()
-                question = question_bank[0]
+                if question_bank:
+                    question = question_bank[0]
 
     if question_bank:
         # screen.empty()
@@ -246,3 +247,5 @@ if __name__ == "__main__":
             st.header("Generated Quiz Question: ")
             for question in question_bank:
                 st.write(question)
+    else:
+        st.write("Quiz generation failed. Please check your inputs and try again.")
